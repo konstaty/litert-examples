@@ -113,7 +113,7 @@ void draw_boxes(
 
     cout << scale_x << " " << scale_y << endl;
 
-    for( int i = 0; i < 100; ++i )
+    for( int i = 0; i < probabilities.size(); ++i )
     {
         if( probabilities[i] < 0.4 ){ continue; }
 
@@ -146,7 +146,7 @@ void draw_boxes(
 }
 
 
-int main(int argc, char *argv[])
+int process(string const &model_path, string const &image_path, vector<cv::Mat> &out)
 {
     LITERT_ASSIGN_OR_RETURN(auto env, Environment::Create({}));
 
@@ -161,29 +161,90 @@ int main(int argc, char *argv[])
     }
 
     LITERT_ASSIGN_OR_RETURN(auto compiled_model,
-        CompiledModel::Create(env, "ssdlite_mobiledet_cpu_320x320_coco_2020_05_19.tflite", options));
+        CompiledModel::Create(env, model_path, options));
 
     LITERT_ASSIGN_OR_RETURN(auto input_buffers, compiled_model.CreateInputBuffers());
+
+    auto t = input_buffers[0].TensorType();
+    auto l = t.Value().Layout();
+    auto et = t.Value().ElementType();
+
+
+    double input_width = l.Dimensions()[1];
+    double input_height = l.Dimensions()[2];
+
     cout << "~~~ INPUT ~~~" << endl;
     cout << input_buffers.size() << endl;
     for (int i = 0; i < input_buffers.size(); ++i)
     {
         auto s = input_buffers[i].Size();
+        auto t = input_buffers[i].TensorType();
+        auto et = t.Value().ElementType();
+        if( et == ElementType::Float32 )
+        {
+            cout << "ElementType::Float32" << endl;
+        }
+        else if( et == ElementType::UInt8 )
+        {
+            cout << "ElementType::UInt8" << endl;
+        }
+
+        auto l = t.Value().Layout();
+
+        cout << "RANK: " << l.Rank() << endl;
+        for( int i = 0; i < l.Rank(); ++i )
+        {
+            cout << "D " << i << ": " << l.Dimensions()[i] << endl;
+        }
+
         cout << "tensor " << i << " size " << s.Value() << endl;
     }
     cout << "~~~ OUTPUT ~~~" << endl;
     LITERT_ASSIGN_OR_RETURN(auto output_buffers, compiled_model.CreateOutputBuffers());
     cout << output_buffers.size() << endl;
+
+    t = output_buffers[0].TensorType();
+    l = t.Value().Layout();
+    uint32_t boxes_num = l.Dimensions()[1];
+
+    t = output_buffers[1].TensorType();
+    l = t.Value().Layout();
+    uint32_t classes_num = l.Dimensions()[1];
+
+    t = output_buffers[2].TensorType();
+    l = t.Value().Layout();
+    uint32_t probabilities_num = l.Dimensions()[1];
+
+
     for (int i = 0; i < output_buffers.size(); ++i)
     {
         auto s = output_buffers[i].Size();
+        auto t = output_buffers[i].TensorType();
+        auto et = t.Value().ElementType();
+        if( et == ElementType::Float32 )
+        {
+            cout << "ElementType::Float32" << endl;
+        }
+        else if( et == ElementType::UInt8 )
+        {
+            cout << "ElementType::UInt8" << endl;
+        }
+
+        auto l = t.Value().Layout();
+
+        cout << "RANK: " << l.Rank() << endl;
+        for( int i = 0; i < l.Rank(); ++i )
+        {
+            cout << "D " << i << ": " << l.Dimensions()[i] << endl;
+        }
+
         cout << "tensor " << i << " size " << s.Value() << endl;
     }
 
-    string image_path {"2-1.jpg"};
     cv::Mat image = cv::imread(image_path);
 
-    if (image.empty()) {
+    if (image.empty())
+    {
         std::cerr << "Failed to load image: " << image_path << std::endl;
         return -1;
     }
@@ -194,8 +255,6 @@ int main(int argc, char *argv[])
     double orig_w = image.cols;
     double orig_ratio = orig_w / orig_h;
 
-    double input_width = 320;
-    double input_height = 320; //(320. / orig_w) * orig_h;
     double input_ratio = input_width / input_height;
 
     cv::Mat resized;
@@ -227,22 +286,36 @@ int main(int argc, char *argv[])
     }
     cv::cvtColor(resized, resized, cv::COLOR_BGR2RGB);
 
-
     cout << input_width << " x " << input_height << endl;
 
-    float input_data[320 * 320 * 3];
-
-    for (int y = 0; y < input_height; ++y) {
-        for (int x = 0; x < input_width; ++x) {
-            cv::Vec3b pixel = resized.at<cv::Vec3b>(y, x);
-            int idx = (y * input_width + x) * 3;
-            input_data[idx + 0] = static_cast<float>(pixel[0]) / 255.;  // R
-            input_data[idx + 1] = static_cast<float>(pixel[1]) / 255.;  // G
-            input_data[idx + 2] = static_cast<float>(pixel[2]) / 255.;  // B
+    if( et == ElementType::Float32 )
+    {
+        vector<float> input_data( input_width * input_height * 3 );
+        for (int y = 0; y < input_height; ++y) {
+            for (int x = 0; x < input_width; ++x) {
+                cv::Vec3b pixel = resized.at<cv::Vec3b>(y, x);
+                int idx = (y * input_width + x) * 3;
+                input_data[idx + 0] = static_cast<float>(pixel[0]) / 255.;  // R
+                input_data[idx + 1] = static_cast<float>(pixel[1]) / 255.;  // G
+                input_data[idx + 2] = static_cast<float>(pixel[2]) / 255.;  // B
+            }
         }
+        input_buffers[0].Write<float>(absl::MakeConstSpan(input_data));
     }
-
-    input_buffers[0].Write<float>(absl::MakeConstSpan(input_data, sizeof(input_data) / 4));
+    else if( et == ElementType::UInt8 )
+    {
+        vector<uint8_t> input_data( input_width * input_height * 3 );
+        for (int y = 0; y < input_height; ++y) {
+            for (int x = 0; x < input_width; ++x) {
+                cv::Vec3b pixel = resized.at<cv::Vec3b>(y, x);
+                int idx = (y * input_width + x) * 3;
+                input_data[idx + 0] = pixel[0];  // R
+                input_data[idx + 1] = pixel[1];  // G
+                input_data[idx + 2] = pixel[2];  // B
+            }
+        }
+        input_buffers[0].Write<uint8_t>(absl::MakeConstSpan(input_data));
+    }
 
     compiled_model.Run(input_buffers, output_buffers);
 
@@ -250,28 +323,48 @@ int main(int argc, char *argv[])
     output_buffers[3].Read<float>(absl::MakeSpan(data));
     cout << data[0] << endl;
 
-    std::vector<float> classes(100);
-    output_buffers[1].Read<float>(absl::MakeSpan(classes));
-    for (int i = 0; i < 100; ++i)
+    std::vector<float> classes( classes_num );
+    cout << output_buffers[1].Read<float>(absl::MakeSpan(classes)).HasValue();
+    for (int i = 0; i < classes_num; ++i)
     {
         cout << classes[i] << endl;
     }
 
-    std::vector<float> probabilities(100);
+    std::vector<float> probabilities( probabilities_num );
     output_buffers[2].Read<float>(absl::MakeSpan(probabilities));
-    for (int i = 0; i < 100; ++i)
+    for (int i = 0; i < probabilities_num; ++i)
     {
         cout << probabilities[i] << endl;
     }
 
-    std::vector<float> boxes(400);
+    std::vector<float> boxes( boxes_num );
     output_buffers[0].Read<float>(absl::MakeSpan(boxes));
 
-    draw_boxes(resized, 320, 320, preserve_ratio, classes, probabilities, boxes);
-    draw_boxes(image, 320, 320, preserve_ratio, classes, probabilities, boxes);
+    draw_boxes(resized, input_width, input_height, preserve_ratio, classes, probabilities, boxes);
+    draw_boxes(image, input_width, input_height, preserve_ratio, classes, probabilities, boxes);
 
-    cv::imwrite("resized.jpg", resized);
-    cv::imwrite("original.jpg", image);
+    out.push_back(std::move(resized));
+    out.push_back(std::move(image));
+
+    return 0;
+}
+
+
+int main(int argc, char *argv[])
+{
+    // "ssdlite_mobiledet_cpu_320x320_coco_2020_05_19.tflite"
+    vector<cv::Mat> images;
+    process
+    (
+        "coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.tflite",
+        "2-1.jpg",
+        images
+    );
+
+    for( int i = 0; i < images.size(); ++i )
+    {
+        cv::imwrite(std::format("processed{}.jpg", i), images[i]);
+    }
 
     std::cout << "DONE\n";
 
