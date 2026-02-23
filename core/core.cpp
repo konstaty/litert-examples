@@ -29,11 +29,10 @@ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+
 #include <algorithm>
 #include <fstream>
 #include <cmath>
-
-#include <opencv2/opencv.hpp>
 
 #include "litert/cc/litert_common.h"
 #include "litert/cc/litert_compiled_model.h"
@@ -45,6 +44,8 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "litert/cc/options/litert_cpu_options.h"
 #include "litert/cc/options/litert_gpu_options.h"
 #include "litert/cc/options/litert_qualcomm_options.h"
+
+#include "core.hpp"
 
 
 using namespace litert;
@@ -349,7 +350,7 @@ int process(string const &model_path, string const &image_path, vector<cv::Mat> 
     return 0;
 }
 
-
+#if defined(__CORE_MAIN__)
 int main(int argc, char *argv[])
 {
     // "ssdlite_mobiledet_cpu_320x320_coco_2020_05_19.tflite"
@@ -370,3 +371,4 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+#endif  // __CORE_MAIN__
