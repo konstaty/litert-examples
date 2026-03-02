@@ -1,12 +1,22 @@
+*******
+License
+*******
+
 The project as a whole is distributed under the GNU General Public License (GPL) v. 3,
 due to its dependency on Qt.
 
-However, files from the **core** can be reused under BSD License.
+However, files from the **./core** directory can be reused under BSD License.
 
-.. image:: gui.png
+************
+Introduction
+************
+
+This a C++ application that demonstate how to run TFLite models using
+LiteRT *CompiledModel* API.
+
+.. image:: docs/gui.png
    :alt: GUI main window
    :align: center
-
 
 ********
 Building
@@ -23,8 +33,16 @@ Obtaining sources
 Installing dependencies
 =======================
 
+Qt
+--
+| apt install qt6-base-dev qt6-declarative-dev qt6-wayland
 
-Configuring & Building
+OpenCV
+------
+| apt install libopencv-core-dev
+
+
+Configuring & Making
 ======================
 
 | mkdir build
