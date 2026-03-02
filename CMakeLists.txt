@@ -39,10 +39,8 @@ target_link_libraries(lrex PRIVATE
     opencv_core
     opencv_imgcodecs
     opencv_imgproc
-    LiteRtRuntimeCApi
+    litert_runtime_c_api_shared_lib
 )
-
-message(${CMAKE_SOURCE_DIR})
 
 
 add_subdirectory(external/litert)
