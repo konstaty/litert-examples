@@ -41,9 +41,20 @@ OpenCV
 ------
 | apt install libopencv-core-dev
 
+Clang
+-----
+| apt install clang-tools-18 clang-tidy-18 clang-18
+
 
 Configuring & Making
 ======================
+
+Before running cmake, make sure it will choose Clang compiler. For example, you can set these two
+environment variables (if you use Clang 18)::
+
+ export CXX=/usr/bin/clang++-18
+ export CC=/usr/bin/clang-18
+
 
 | mkdir build
 | cmake -B build .
