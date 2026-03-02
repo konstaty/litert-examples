@@ -112,8 +112,6 @@ void draw_boxes(
         scale_y = image.rows / input_height;
     }
 
-    cout << scale_x << " " << scale_y << endl;
-
     for( int i = 0; i < probabilities.size(); ++i )
     {
         if( probabilities[i] < 0.4 ){ continue; }
@@ -175,12 +173,15 @@ int process(string const &model_path, string const &image_path, vector<cv::Mat> 
     double input_height = l.Dimensions()[2];
 
     cout << "~~~ INPUT ~~~" << endl;
-    cout << input_buffers.size() << endl;
+    cout << "Number of tensors: " << input_buffers.size() << endl;
     for (int i = 0; i < input_buffers.size(); ++i)
     {
         auto s = input_buffers[i].Size();
         auto t = input_buffers[i].TensorType();
         auto et = t.Value().ElementType();
+
+        cout << "tensor " << i << " size " << s.Value() << endl;
+
         if( et == ElementType::Float32 )
         {
             cout << "ElementType::Float32" << endl;
@@ -198,11 +199,11 @@ int process(string const &model_path, string const &image_path, vector<cv::Mat> 
             cout << "D " << i << ": " << l.Dimensions()[i] << endl;
         }
 
-        cout << "tensor " << i << " size " << s.Value() << endl;
+
     }
     cout << "~~~ OUTPUT ~~~" << endl;
     LITERT_ASSIGN_OR_RETURN(auto output_buffers, compiled_model.CreateOutputBuffers());
-    cout << output_buffers.size() << endl;
+    cout << "Number of tensors: " << output_buffers.size() << endl;
 
     t = output_buffers[0].TensorType();
     l = t.Value().Layout();
@@ -222,6 +223,9 @@ int process(string const &model_path, string const &image_path, vector<cv::Mat> 
         auto s = output_buffers[i].Size();
         auto t = output_buffers[i].TensorType();
         auto et = t.Value().ElementType();
+
+        cout << "tensor " << i << " size " << s.Value() << endl;
+
         if( et == ElementType::Float32 )
         {
             cout << "ElementType::Float32" << endl;
@@ -239,7 +243,7 @@ int process(string const &model_path, string const &image_path, vector<cv::Mat> 
             cout << "D " << i << ": " << l.Dimensions()[i] << endl;
         }
 
-        cout << "tensor " << i << " size " << s.Value() << endl;
+
     }
 
     cv::Mat image = cv::imread(image_path);
@@ -287,8 +291,6 @@ int process(string const &model_path, string const &image_path, vector<cv::Mat> 
     }
     cv::cvtColor(resized, resized, cv::COLOR_BGR2RGB);
 
-    cout << input_width << " x " << input_height << endl;
-
     if( et == ElementType::Float32 )
     {
         vector<float> input_data( input_width * input_height * 3 );
@@ -322,21 +324,26 @@ int process(string const &model_path, string const &image_path, vector<cv::Mat> 
 
     std::vector<float> data(1);
     output_buffers[3].Read<float>(absl::MakeSpan(data));
-    cout << data[0] << endl;
 
     std::vector<float> classes( classes_num );
-    cout << output_buffers[1].Read<float>(absl::MakeSpan(classes)).HasValue();
+    output_buffers[1].Read<float>(absl::MakeSpan(classes)).HasValue();
+
+#if DEBUG
     for (int i = 0; i < classes_num; ++i)
     {
         cout << classes[i] << endl;
     }
+#endif
 
     std::vector<float> probabilities( probabilities_num );
     output_buffers[2].Read<float>(absl::MakeSpan(probabilities));
+
+#if DEBUG
     for (int i = 0; i < probabilities_num; ++i)
     {
         cout << probabilities[i] << endl;
     }
+#endif
 
     std::vector<float> boxes( boxes_num );
     output_buffers[0].Read<float>(absl::MakeSpan(boxes));

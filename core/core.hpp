@@ -26,11 +26,11 @@ public:
     {
         namespace fs = std::filesystem;
 
-        for( auto const &entry : fs::directory_iterator(".") )
+        for( auto const &entry : fs::directory_iterator("./models") )
         {
             if( entry.is_regular_file() && entry.path().extension().string() == ".tflite" )
             {
-                models_.push_back(entry.path().filename().string());
+                models_.push_back(entry.path().string());
             }
         }
 
