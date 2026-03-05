@@ -33,13 +33,17 @@ Obtaining sources
 Installing dependencies
 =======================
 
+Tools
+-----
+apt install cmake
+
 Qt
 --
 | apt install qt6-base-dev qt6-declarative-dev qt6-wayland
 
 OpenCV
 ------
-| apt install libopencv-core-dev
+| apt install libopencv-dev libopencv-core-dev
 
 Clang
 -----
